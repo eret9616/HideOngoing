@@ -12,7 +12,7 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        store = RuleStore(this)
+        store = RuleStore.get(this)
         live = this
     }
 
@@ -41,6 +41,14 @@ class NotificationListener : NotificationListenerService() {
             it.packageName == pkg &&
                 (channelId == null || it.notification?.channelId == channelId)
         }?.forEach(::enforce)
+        publish()
+    }
+
+    fun liftRule(pkg: String, channelId: String?) {
+        snoozedNotifications?.filter {
+            it.packageName == pkg &&
+                (channelId == null || it.notification?.channelId == channelId)
+        }?.forEach { snoozeNotification(it.key, 1L) }
         publish()
     }
 

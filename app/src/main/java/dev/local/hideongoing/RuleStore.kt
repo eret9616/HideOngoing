@@ -16,7 +16,7 @@ data class Rule(val pkg: String, val channelId: String?) {
     }
 }
 
-class RuleStore(ctx: Context) {
+class RuleStore private constructor(ctx: Context) {
     private val sp = ctx.applicationContext.getSharedPreferences("rules", Context.MODE_PRIVATE)
     private val _rules = MutableStateFlow(load())
     val rules: StateFlow<Set<Rule>> = _rules.asStateFlow()
@@ -35,7 +35,15 @@ class RuleStore(ctx: Context) {
     fun matches(pkg: String, channelId: String?): Boolean =
         _rules.value.any { it.pkg == pkg && (it.channelId == null || it.channelId == channelId) }
 
-    private companion object {
-        const val KEY = "set"
+    companion object {
+        private const val KEY = "set"
+
+        @Volatile
+        private var instance: RuleStore? = null
+
+        fun get(ctx: Context): RuleStore =
+            instance ?: synchronized(this) {
+                instance ?: RuleStore(ctx).also { instance = it }
+            }
     }
 }
