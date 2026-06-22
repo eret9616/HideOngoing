@@ -18,13 +18,20 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         live = null
+        _connected.value = false
         super.onDestroy()
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        _connected.value = true
         activeNotifications?.forEach(::enforce)
         publish()
+    }
+
+    override fun onListenerDisconnected() {
+        _connected.value = false
+        super.onListenerDisconnected()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -74,5 +81,10 @@ class NotificationListener : NotificationListenerService() {
 
         private val _state = MutableStateFlow<List<StatusBarNotification>>(emptyList())
         val state: StateFlow<List<StatusBarNotification>> = _state.asStateFlow()
+
+        // 监听服务是否真正连接（绑定）。系统在应用更新/恢复备份后会解绑监听器，
+        // 此时权限仍显示已授予，但服务并未连接，导致列表为空。UI 据此自愈重连。
+        private val _connected = MutableStateFlow(false)
+        val connected: StateFlow<Boolean> = _connected.asStateFlow()
     }
 }

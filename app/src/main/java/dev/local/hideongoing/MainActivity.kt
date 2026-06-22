@@ -1,8 +1,10 @@
 package dev.local.hideongoing
 
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +57,9 @@ private fun Screen() {
     val store = remember { RuleStore.get(ctx) }
     val rules by store.rules.collectAsState()
     val actives by NotificationListener.state.collectAsState()
+    val connected by NotificationListener.connected.collectAsState()
+
+    val component = remember { ComponentName(ctx, NotificationListener::class.java) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var enabled by remember {
@@ -67,6 +72,11 @@ private fun Screen() {
             if (event == Lifecycle.Event.ON_RESUME) {
                 enabled = NotificationManagerCompat.getEnabledListenerPackages(ctx)
                     .contains(ctx.packageName)
+                // 权限已授予却未连接（常见于应用更新/恢复备份后系统未自动重绑）时，
+                // 主动请求系统重新绑定监听服务，打开应用即可自愈，无需手动开关权限。
+                if (enabled) {
+                    NotificationListenerService.requestRebind(component)
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -81,6 +91,23 @@ private fun Screen() {
                 ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }) { Text("打开通知使用权设置") }
             return@Column
+        }
+
+        if (!connected) {
+            Text("监听服务未连接，正在尝试重连…")
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(onClick = {
+                    NotificationListenerService.requestRebind(component)
+                }) { Text("重新连接") }
+                TextButton(onClick = {
+                    ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                }) { Text("去设置里开关一次") }
+            }
+            Spacer(Modifier.height(8.dp))
         }
 
         Text("活跃常驻通知", style = MaterialTheme.typography.titleMedium)
