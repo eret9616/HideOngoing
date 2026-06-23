@@ -1,3 +1,5 @@
+> **⚠️ 此仓库已停止单独维护,代码已并入 monorepo [eret9616/pgz110_root](https://github.com/eret9616/pgz110_root),位于 `HideOngoing/` 目录。** 后续更新请到那边;本仓库已归档为只读。
+
 # HideOngoing
 
 隐藏 Android "无法清除" 的常驻通知。基于 `NotificationListenerService`，纯事件驱动，零轮询。
